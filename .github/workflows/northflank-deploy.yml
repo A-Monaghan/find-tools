@@ -14,6 +14,8 @@
 # Northflank: add GHCR credentials (ghcr.io) so services can pull private images; match CREDENTIALS_ID to your saved credential name/id.
 #
 # Repo layout: this workflow assumes the Git root is RAG-v2.1 (backend/, frontend/, .github/ at top level).
+# If you build on Northflank with buildpacks (not these Docker images), backend/Procfile and frontend/Procfile
+# define the web process. If the Git repo is a monorepo, set each service build context to backend/ or frontend/.
 
 name: Deploy to Northflank
 
