@@ -1,0 +1,8 @@
+# Cloud Native Buildpacks — helps Procfile "web" become the default launch process.
+# https://github.com/paketo-buildpacks/procfile (included in heroku/builder stacks)
+[_]
+schema-version = "0.2"
+
+[[io.buildpacks.build.env]]
+name = "BP_PROCFILE_DEFAULT_PROCESS"
+value = "web"

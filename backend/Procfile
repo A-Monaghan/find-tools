@@ -1,3 +1,1 @@
-# Buildpacks (Northflank, Paketo, etc.) need an explicit web process when no default is set.
-# Docker image still uses Dockerfile CMD; this file is ignored by plain docker run.
-web: uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+web: uvicorn main:app --host 0.0.0.0 --port $PORT
