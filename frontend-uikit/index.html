@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIND Tools — UIkit</title>
+  <!-- UIkit: use CDN by default; or local after ./setup-uikit.sh -->
+  <link rel="stylesheet" href="vendor/uikit/css/uikit.min.css" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/uikit@3/dist/css/uikit.min.css'">
+  <script src="vendor/uikit/js/uikit.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/uikit@3/dist/js/uikit.min.js'"></script>
+  <script src="vendor/uikit/js/uikit-icons.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/uikit@3/dist/js/uikit-icons.min.js'"></script>
+  <style>
+    /* Minimal overrides for chat layout */
+    .uk-chat-message { max-width: 85%; }
+    .uk-chat-message.user { margin-left: auto; }
+    .uk-chat-message.assistant { margin-right: auto; }
+    #messages { min-height: 300px; max-height: 60vh; overflow-y: auto; }
+    .markdown-body p { margin: 0.25em 0; }
+  </style>
+</head>
+<body class="uk-height-viewport uk-background-muted">
+  <div class="uk-container uk-container-expand uk-height-1-1 uk-padding-remove">
+    <div class="uk-grid uk-grid-collapse uk-height-1-1" uk-grid>
+      <!-- Sidebar: Document library -->
+      <div class="uk-width-1-4@m uk-width-1-1 uk-background-default uk-padding uk-border-right">
+        <h1 class="uk-h4 uk-margin-small-bottom">FIND Tools</h1>
+        <p class="uk-text-meta uk-margin-small-bottom">Discuss &amp; Gather</p>
+        <div id="api-status" class="uk-margin-small-bottom"></div>
+
+        <ul class="uk-tab uk-tab-left uk-margin-small" uk-tab>
+          <li class="uk-active"><a href="#">Documents</a></li>
+        </ul>
+
+        <div class="uk-margin-small">
+          <form id="upload-form" class="uk-form-stacked">
+            <div class="uk-margin-small">
+              <input type="file" id="file-input" accept=".pdf" class="uk-input uk-form-small">
+            </div>
+            <button type="submit" class="uk-button uk-button-primary uk-button-small uk-width-1-1" id="upload-btn">
+              <span uk-icon="upload"></span> Upload PDF
+            </button>
+          </form>
+        </div>
+
+        <ul id="doc-list" class="uk-list uk-margin-top uk-overflow-auto" style="max-height: 50vh;">
+          <li><p class="uk-text-meta">Loading...</p></li>
+        </ul>
+      </div>
+
+      <!-- Main: Chat -->
+      <div class="uk-width-3-4@m uk-width-1-1 uk-flex uk-flex-column uk-padding">
+        <div class="uk-flex uk-flex-between uk-flex-middle uk-margin-bottom">
+          <div>
+            <span id="selected-doc" class="uk-text-meta">All Documents</span>
+          </div>
+          <div>
+            <select id="model-select" class="uk-select uk-form-small uk-form-width-small uk-margin-small-right"></select>
+            <button id="sources-btn" class="uk-button uk-button-default uk-button-small" type="button" style="display:none;">
+              <span uk-icon="quote"></span> Sources
+            </button>
+          </div>
+        </div>
+
+        <div id="messages" class="uk-flex uk-flex-column uk-margin-bottom uk-padding uk-background-default uk-border-rounded">
+          <div class="uk-text-center uk-text-muted uk-margin-auto">
+            <span uk-icon="icon: comment; ratio: 2"></span>
+            <p class="uk-margin-small-top">Ask a question about your documents</p>
+          </div>
+        </div>
+
+        <form id="chat-form" class="uk-margin-top">
+          <div class="uk-inline uk-width-1-1">
+            <input type="text" id="query-input" class="uk-input uk-form-large" placeholder="Ask about your documents..." autocomplete="off">
+            <button type="submit" class="uk-form-icon uk-form-icon-flip" uk-icon="arrow-right"></button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offcanvas: Sources -->
+  <div id="sources-offcanvas" uk-offcanvas="flip: true; overlay: true">
+    <div class="uk-offcanvas-bar">
+      <button class="uk-offcanvas-close" type="button" uk-close></button>
+      <h3>Sources</h3>
+      <div id="sources-content"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

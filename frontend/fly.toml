@@ -1,0 +1,21 @@
+# Fly.io config for RAG-v2.1 frontend (DocuMind)
+# Build with VITE_API_BASE_URL pointing to rag-backend, e.g. https://rag-backend.fly.dev
+
+app = "rag-frontend"
+
+[build]
+  dockerfile = "Dockerfile"
+  [build.args]
+    VITE_API_BASE_URL = "https://rag-backend.fly.dev"
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

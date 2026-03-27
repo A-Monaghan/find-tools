@@ -1,0 +1,39 @@
+# Fly.io config for RAG-v2.1 backend
+# Requires: Fly Postgres, Qdrant, Redis (Upstash or Fly Machine)
+# Secrets: fly secrets set OPENROUTER_API_KEY=xxx OPENAI_API_KEY=xxx DB_PASSWORD=xxx
+# Attach Postgres: fly postgres attach <postgres-app>
+# Set: DATABASE_URL, QDRANT_URL, REDIS_URL via secrets or [env]
+
+app = "rag-backend"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8000"
+  OPERATION_MODE = "hybrid"
+  UPLOAD_DIR = "/app/storage/documents"
+  VECTOR_STORE_TYPE = "qdrant"
+  CORS_ORIGINS = "https://rag-frontend.fly.dev,http://localhost:5175"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    path = "/health"
+
+[[vm]]
+  memory = "2gb"
+  cpu_kind = "shared"
+  cpus = 2
+
+# Create volume first: fly volumes create rag_documents --region <region>
+[mounts]
+  source = "rag_documents"
+  destination = "/app/storage/documents"

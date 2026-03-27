@@ -1,0 +1,8 @@
+# Override to use UIkit frontend instead of React.
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.uikit.yml up -d
+services:
+  frontend:
+    build:
+      context: ./frontend-uikit
+      dockerfile: Dockerfile
+    container_name: rag-frontend-uikit

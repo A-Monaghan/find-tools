@@ -1,0 +1,105 @@
+# Deploy backend + frontend images to Northflank via GHCR.
+#
+# Prereqs (GitHub repo → Settings → Secrets and variables → Actions):
+#   NORTHFLANK_API_KEY          — token with "Update deployment" (Northflank dashboard)
+#   NORTHFLANK_PROJECT_ID       — project id (Northflank UI)
+#   NORTHFLANK_SERVICE_BACKEND  — service id for the FastAPI service
+#   NORTHFLANK_SERVICE_FRONTEND — service id for the nginx/static service
+#   NORTHFLANK_REGISTRY_CREDENTIALS_ID — optional; registry credentials id in Northflank (for GHCR pull)
+#
+# Variables (same place, or hardcode in env: below):
+#   BACKEND_PUBLIC_URL — full URL of the backend service (no trailing slash), e.g. https://api-xxxxx.northflank.app
+#     Used at frontend *build* time as VITE_API_BASE_URL so the SPA calls your API with CORS (set CORS_ORIGINS on backend).
+#
+# Northflank: add GHCR credentials (ghcr.io) so services can pull private images; match CREDENTIALS_ID to your saved credential name/id.
+#
+# Repo layout: this workflow assumes the Git root is RAG-v2.1 (backend/, frontend/, .github/ at top level).
+
+name: Deploy to Northflank
+
+on:
+  push:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: image
+        # GHCR image names must be lowercase
+        run: echo "prefix=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.image.outputs.prefix }}/rag-backend:${{ github.sha }}
+
+      - name: Deploy backend to Northflank
+        uses: northflank/deploy-to-northflank@v1
+        with:
+          northflank-api-key: ${{ secrets.NORTHFLANK_API_KEY }}
+          project-id: ${{ secrets.NORTHFLANK_PROJECT_ID }}
+          service-id: ${{ secrets.NORTHFLANK_SERVICE_BACKEND }}
+          image-path: ${{ steps.image.outputs.prefix }}/rag-backend:${{ github.sha }}
+          credentials-id: ${{ secrets.NORTHFLANK_REGISTRY_CREDENTIALS_ID }}
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require BACKEND_PUBLIC_URL (repository variable)
+        if: ${{ vars.BACKEND_PUBLIC_URL == '' }}
+        run: |
+          echo "Set repository variable BACKEND_PUBLIC_URL to your Northflank backend URL (no trailing slash), e.g. https://api-xxxxx.northflank.app"
+          exit 1
+
+      - id: image
+        run: echo "prefix=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Split deploy: bake the public API URL into the Vite bundle (same pattern as Fly).
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.image.outputs.prefix }}/rag-frontend:${{ github.sha }}
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.BACKEND_PUBLIC_URL }}
+
+      - name: Deploy frontend to Northflank
+        uses: northflank/deploy-to-northflank@v1
+        with:
+          northflank-api-key: ${{ secrets.NORTHFLANK_API_KEY }}
+          project-id: ${{ secrets.NORTHFLANK_PROJECT_ID }}
+          service-id: ${{ secrets.NORTHFLANK_SERVICE_FRONTEND }}
+          image-path: ${{ steps.image.outputs.prefix }}/rag-frontend:${{ github.sha }}
+          credentials-id: ${{ secrets.NORTHFLANK_REGISTRY_CREDENTIALS_ID }}

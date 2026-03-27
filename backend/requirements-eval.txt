@@ -1,0 +1,4 @@
+# Optional: RAG evaluation (DeepEval). Install after requirements.txt if you need /eval endpoints.
+# Adds langchain and other heavy deps; not needed for normal run/Docker build.
+-r requirements.txt
+deepeval>=1.0.0

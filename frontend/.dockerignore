@@ -1,0 +1,10 @@
+# Faster frontend builds; node_modules and dist are re-created in the image.
+node_modules
+dist
+.git
+.gitignore
+.env
+.env.*
+*.md
+coverage
+.vitest

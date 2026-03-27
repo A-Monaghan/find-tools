@@ -1,0 +1,22 @@
+# Override for local testing: adds Neo4j for Entity Extractor Push-to-Neo4j
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d
+# OOCP runs on host:5001; RAG backend uses ENTITY_EXTRACTOR_URL (set in main compose).
+
+services:
+  neo4j:
+    image: neo4j:5-community
+    container_name: rag-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/password
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - rag-network
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:

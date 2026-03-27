@@ -1,0 +1,19 @@
+# Minimal deps for Companies House pipeline only.
+# Use when full install fails (e.g. pikepdf/qpdf, unstructured).
+#
+# Install:  pip install -r requirements-ch-minimal.txt
+# Run:     cd backend && uvicorn ch_standalone:app --host 0.0.0.0 --port 8010
+# Frontend: npm run dev (proxy /api to 8010) or set VITE_API_BASE_URL=http://localhost:8010
+
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+pandas>=2.0.0
+requests>=2.28.0
+
+slowapi==0.1.9

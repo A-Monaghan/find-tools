@@ -1,0 +1,2 @@
+# Run ../setup-uikit.sh to populate css/ and js/ with local UIkit build.
+# Otherwise index.html uses CDN fallback.

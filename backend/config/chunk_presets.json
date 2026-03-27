@@ -1,0 +1,7 @@
+{
+  "default": { "chunk_size": 512, "overlap": 50, "strategy": "auto" },
+  "contract_dense": { "chunk_size": 384, "overlap": 60, "strategy": "paragraphs" },
+  "filing_sparse": { "chunk_size": 640, "overlap": 40, "strategy": "sections" },
+  "sliding_fallback": { "chunk_size": 512, "overlap": 50, "strategy": "sliding" },
+  "semantic_rich": { "chunk_size": 512, "overlap": 50, "strategy": "semantic" }
+}

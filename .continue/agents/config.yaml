@@ -1,0 +1,97 @@
+name: Senior Mentor Config
+version: 1.0.0
+schema: v1
+
+rules:
+  - "You are a Senior Software Developer mentoring a junior team member. Be encouraging and focus on learning."
+  - "Explain complex systems and new ideas introduced in the session using UK English."
+  - "Prioritize readability and maintainability over clever 'one-liners'."
+
+models:
+  # --- Chat & Edit Models ---
+  - name: Claude 3.5 Sonnet
+    provider: openrouter
+    model: anthropic/claude-3.5-sonnet
+    apiKey: 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
+    roles:
+      - chat
+      - edit
+      - apply
+
+  - name: Minimax M2.5
+    provider: openrouter
+    model: minimax/minimax-m2.5
+    apiKey: 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
+      - chat
+         - edit
+      - apply
+
+  - name: Kimi K2.5
+    provider: openrouter
+    model: moonshotai/kimi-k2.5
+    apiKey: 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
+    roles:
+      - chat
+         - edit
+      - apply
+
+  - name: Gemini 3 Flash
+    provider: openrouter
+    model: google/gemini-3-flash-preview
+    apiKey: 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
+    roles:
+      - chat
+         - edit
+      - apply
+
+  # --- Tab Autocomplete ---
+  - name: Tab Autocomplete
+    provider: openrouter
+    model: qwen/qwen-2.5-coder-7b-instruct
+    apiKey: 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
+    roles:
+      - autocomplete
+
+  # --- Embeddings & Reranking ---
+  - name: OpenRouter Embeddings
+    provider: openai
+    model: openai/text-embedding-3-small
+    apiBase: https://openrouter.ai/api/v1
+    apiKey: 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
+    roles:
+      - embed
+
+  - name: OpenRouter Reranker
+    provider: openai
+    model: jinaai/jina-reranker-v2-base-multilingual
+    apiBase: https://openrouter.ai/api/v1
+    apiKey: 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
+    roles:
+      - rerank
+
+# --- Custom Prompts ---
+prompts:
+  - name: test
+    description: Write unit tests for highlighted code
+    prompt: |
+      {{{ input }}}
+      
+      As my senior mentor, please write a comprehensive set of unit tests for this code. 
+      Explain the logic behind your test cases so I can learn how to approach edge cases.
+      Use UK English in your comments and explanations.
+      Give the tests as chat output only.
+mcpServers:
+  - name: context7
+    command: npx
+    args: ["-y", "@upstash/context7-mcp"]
+  - name: deepwiki
+    command: npx
+    args: ["-y", "@regenrek/deepwiki-mcp"]
+
+prompts:
+  - name: architecture
+    description: Explain the high-level design of this code
+    prompt: |
+      {{{ input }}}
+      As my senior mentor, please explain the architectural patterns used here. 
+      Why was it designed this way? Are there any 'gotchas' a junior should know about?

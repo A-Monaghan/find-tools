@@ -1,0 +1,21 @@
+# Keep backend images small and avoid leaking local secrets into the build context.
+__pycache__
+*.py[cod]
+*$py.class
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.venv
+venv
+env
+.git
+.gitignore
+.env
+.env.*
+*.md
+tests/
+htmlcov/
+.coverage
+*.egg-info
+dist/
+build/
