@@ -1,245 +1,223 @@
-# RAG-v2.1
+# FIND Tools (RAG-v2.1)
 
-A private, browser-based Retrieval-Augmented Generation (RAG) application for querying large documents with grounded, citation-based answers.
+The repository folder is `RAG-v2.1`; the product UI and OpenAPI title are **FIND Tools** — a browser-based Retrieval-Augmented Generation (RAG) stack for discussing large document sets with grounded, citation-backed answers, plus optional investigation tooling (graph, UK company data, name screening).
 
-## Features
+## What you get
 
-- **Multi-Format Ingestion**: PDF, DOCX, PPTX, XLSX, HTML, images via Docling (falls back to PyMuPDF)
-- **Semantic Chunking**: Embedding-similarity-based chunk boundaries (+ section, paragraph, sliding strategies)
-- **Fusion Retrieval**: BM25 + dense vector search combined via Reciprocal Rank Fusion
-- **HyDE**: Hypothetical Document Embedding for short/vague queries
-- **Corrective RAG**: Self-checks retrieval quality; falls back to web search when confidence is low
-- **Hybrid LLM Support**: Local (vLLM) or cloud (OpenRouter) inference
-- **Citation Tracking**: Every answer includes source document and page references
-- **RAG Evaluation**: Faithfulness, answer relevancy, contextual precision/recall (DeepEval)
-- **Privacy-First**: Run completely offline with local models
-- **Query Logging**: Full audit trail of all queries and responses
-- **Investigation workspaces**: Optional “case” labels filter the document library; uploads target a chosen workspace (`/workspaces`, `workspace_id` on documents)
-- **Retrieval trace** (UI): Each answer can show HyDE, fusion vs dense, CRAG, and per-chunk dense/BM25 ranks (`retrieval_trace` on `/chat/query`)
-- **Corpus search**: Quick ILIKE search across indexed chunk text and titles (`GET /documents/search?q=…`)
+### Core RAG (Chat)
 
-## Architecture
+- **Ingestion**: Docling when `ENABLE_DOCLING` is on and the package is available (multi-format: PDF, DOCX, PPTX, XLSX, HTML, images where supported); otherwise **PyMuPDF** for PDF-focused paths.
+- **Chunking**: Strategies include `auto`, sections, paragraphs, sliding, and semantic (embedding-similarity boundaries).
+- **Retrieval**: Fusion of **BM25 + dense** vectors (Reciprocal Rank Fusion) when `ENABLE_FUSION_RETRIEVAL` is on; optional **cross-encoder rerank** (`ENABLE_CROSS_ENCODER_RERANK`).
+- **HyDE** for short or vague queries (`ENABLE_HYDE`).
+- **Corrective RAG**: Retrieval self-check and optional web fallback (`ENABLE_CORRECTIVE_RAG`).
+- **Fast path**: `RAG_LOW_LATENCY=true` turns off HyDE, fusion, CRAG, and cross-encoder rerank for quicker turns.
+- **Stability presets**: `RUNTIME_STABILITY_PROFILE` — `custom`, `stability_safe`, or `stability_full` (see `.env.example`).
+- **LLM routing**: **OpenRouter** (cloud) with optional **vLLM** when `ENABLE_VLLM` is set for private/hybrid modes; UI supports **Research** (selected model) vs **Draft** (server “fast” model, `OPENROUTER_FAST_MODEL`).
+- **Citations & trace**: Answers carry source references; responses can include **retrieval trace** (HyDE, fusion, CRAG, per-chunk ranks).
+- **Workspaces**: Optional case-style labels filter the library; uploads can target a workspace.
+- **Corpus search**: `GET /documents/search?q=…` — quick search across indexed chunk text and titles.
+- **Conversations & logs**: Stored conversations, query audit (`/logs/queries`), optional DeepEval-style evaluation endpoint.
 
+### Other UI areas (same shell)
+
+| Area | Role |
+|------|------|
+| **Entity Extractor** | Calls an optional **OOCP Text Body Extractor** service (proxied as `/ee` in Vite dev). |
+| **Companies House** | UK company pipeline and filings via backend routes under `/ch` (API key from env or UI). |
+| **Name screening** | Server-side lookups (OpenSanctions / Aleph / Sayari) when keys are set — see `.env.example`. |
+| **Tools** | Shortcuts into other tabs (memory, extractor, about). |
+| **About** | Product information. |
+
+### Knowledge graph (optional)
+
+- **Neo4j** (Aura or local): entity graph build, browse, and natural-language graph queries via `/graph/*` when configured.
+- `GET /health` reports Neo4j connectivity alongside LLM providers.
+
+### Auth
+
+- JWT-based **register / login** under `/auth` for deployments that enable it (see backend routes).
+
+## Architecture (high level)
+
+### System context
+
+```mermaid
+flowchart TB
+  subgraph client["Client"]
+    B[Browser]
+  end
+
+  subgraph fe["Frontend"]
+    FE["React SPA<br/>:3000 prod · :5175 Vite dev"]
+  end
+
+  subgraph api["FIND Tools API"]
+    A["FastAPI · :8000<br/>auth · documents · workspaces · chat · logs<br/>graph · ch · screening"]
+  end
+
+  subgraph data["Data stores"]
+    PG[("PostgreSQL<br/>metadata + pgvector option")]
+    QD[("Qdrant<br/>chunk embeddings")]
+    RD[("Redis<br/>cache")]
+    NJ[("Neo4j<br/>optional graph")]
+  end
+
+  subgraph infer["Models"]
+    OR["OpenRouter<br/>LLM"]
+    OAI["OpenAI<br/>embeddings"]
+    VLLM["vLLM<br/>optional local LLM"]
+    LOC["sentence-transformers<br/>local embeddings"]
+  end
+
+  subgraph outbound["Outbound APIs"]
+    CHA["Companies House API"]
+    SCR["OpenSanctions · Aleph · Sayari"]
+  end
+
+  subgraph opt["Optional sidecar"]
+    EE["OOCP Entity Extractor<br/>:5001 typical"]
+  end
+
+  B --> FE
+  FE -->|"HTTP /api"| A
+  FE -.->|"dev /ee proxy"| EE
+  A --> PG
+  A --> QD
+  A --> RD
+  A --> NJ
+  A --> OR
+  A --> OAI
+  A --> VLLM
+  A --> LOC
+  A --> CHA
+  A --> SCR
 ```
-┌─────────────┐      ┌──────────────────────────────────────────────────────────┐
-│   Frontend  │──────▶│                     Backend (FastAPI)                    │
-│  (React)    │      │                                                          │
-└─────────────┘      │  ┌──────────┐  ┌──────────┐  ┌───────────┐  ┌────────┐ │
-                     │  │ Docling / │  │ Semantic  │  │  Fusion   │  │  HyDE  │ │
-                     │  │ PyMuPDF  │──▶│ Chunker  │  │ Retrieval │  │        │ │
-                     │  └──────────┘  └──────────┘  │ BM25+Dense│  └────────┘ │
-                     │                               └───────────┘             │
-                     │  ┌──────────┐  ┌──────────┐  ┌───────────┐             │
-                     │  │   CRAG   │  │ Reranker │  │ DeepEval  │             │
-                     │  │ Web fall │  │ Cross-Enc│  │ Metrics   │             │
-                     │  └──────────┘  └──────────┘  └───────────┘             │
-                     └──────────────────────────────────────────────────────────┘
-                            │                          │
-                            ▼                          ▼
-                     ┌──────────────┐          ┌─────────────────┐
-                     │  PostgreSQL  │          │  Vector Store   │
-                     │  (Metadata)  │          │   (Qdrant)      │
-                     └──────────────┘          └─────────────────┘
+
+### Chat / RAG query path
+
+Configurable flags can skip steps (e.g. `RAG_LOW_LATENCY`).
+
+```mermaid
+flowchart LR
+  Q[User query] --> HYDE{HyDE}
+  HYDE --> FUS["Fusion\nBM25 + dense"]
+  FUS --> RR{"Cross-encoder\nrerank"}
+  RR --> CRAG{CRAG check}
+  CRAG --> GEN["LLM\nResearch or Draft"]
+  GEN --> OUT["Answer + citations\n+ retrieval trace"]
 ```
 
-## Quick Start
+Embeddings at ingest and query time use local **sentence-transformers** and/or **OpenAI**, depending on mode and keys.
+
+## Quick start
 
 ### Prerequisites
 
 - Docker and Docker Compose
-- (Optional) OpenRouter API key for cloud mode
-- (Optional) vLLM for local inference
+- (Optional) OpenRouter and OpenAI keys for cloud LLM + embeddings
+- (Optional) vLLM for local inference; Neo4j for graph features
 
-### 1. Clone and Configure
+### Configure
 
 ```bash
 cd RAG-v2.1
 cp .env.example .env
-# Edit .env with your API keys and preferences
+# Set DATABASE_URL / keys as needed — see comments in .env.example
 ```
 
-### 2. Start Services
+Note: `.env.example` lists `PORT=8010` for documentation of alternate deployments; the **bundled FastAPI app listens on 8000** (`backend/main.py`, Docker `backend` service).
+
+### Run with Docker Compose
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-This starts:
-- PostgreSQL with pgvector on port 5432
-- Qdrant on port 6333
-- Redis on port 6379
-- Backend API on port 8000
-- Frontend on port 3000
+Typical ports:
 
-### 2b. Local API with repo `venv` (optional)
+| Service | Port |
+|---------|------|
+| Frontend (nginx → static build) | **3000** |
+| API | **8000** |
+| PostgreSQL | 5432 |
+| Qdrant | 6333 (HTTP), 6334 (gRPC) |
+| Redis | 6379 |
 
-Use the checked-in pattern: `RAG-v2.1/venv` (gitignored) plus `scripts/run_backend_venv.sh` when you want the FastAPI process on the host while databases still run in Docker (or elsewhere).
+Open **http://localhost:3000**. API docs: **http://localhost:8000/docs**.
 
-1. **Python 3.12** — create the venv with `python3.12`; Python 3.13 does not install the pinned `qdrant-client==1.7.0`.
+### Local API with a venv (optional)
+
+Useful when databases run in Docker but you run the API on the host:
+
+1. **Python 3.12** recommended (pinned deps such as `qdrant-client` may not install on 3.13).
 2. From `RAG-v2.1`:
    ```bash
    python3.12 -m venv venv
    ./venv/bin/pip install -r backend/requirements.txt
    ```
-3. Ensure `.env` points at your Postgres, Qdrant, and Redis (e.g. start infra only: `docker compose up -d postgres qdrant redis`).
-4. Run the API:
-   ```bash
-   chmod +x scripts/run_backend_venv.sh   # once
-   ./scripts/run_backend_venv.sh
-   ```
+3. Point `.env` at `127.0.0.1` for Postgres, Qdrant, and Redis (not Docker service hostnames).
+4. Start infra only if needed: `docker compose up -d postgres qdrant redis`
+5. Run: `./scripts/run_backend_venv.sh` (after `chmod +x` once).
 
-### 3. (Optional) Entity Extractor
-
-For URL/text entity extraction, start the OOCP backend:
+### Frontend dev server
 
 ```bash
-cd "OOCP/TExt Body Extractor" && ./start_backend.sh
-```
-
-Runs on port 5001. The frontend proxies `/ee` to it in dev.
-
-### 4. (Optional) Neo4j – Ingest into Graph
-
-To push extracted entities/relationships into Neo4j:
-
-1. Run Neo4j (Docker: `docker run -d -p 7687:7687 -p 7474:7474 -e NEO4J_AUTH=neo4j/yourpassword neo4j:5-community`)
-2. Add to `OOCP/TExt Body Extractor/.env`:
-   ```
-   NEO4J_URI=bolt://localhost:7687
-   NEO4J_USERNAME=neo4j
-   NEO4J_PASSWORD=yourpassword
-   ```
-3. Restart OOCP. The Entity Extractor UI will show "Neo4j: Connected" and enable Push to Neo4j.
-
-### 5. Access the Application
-
-Open http://localhost:3000 in your browser (or http://localhost:5175 when running frontend dev server).
-
-## Operation Modes
-
-### Private Mode (Local Only)
-
-Run completely offline with local models:
-
-```bash
-# 1. Start vLLM (in separate terminal)
-python -m vllm.entrypoints.openai.api_server \
-    --model mistralai/Mistral-7B-Instruct-v0.3 \
-    --tensor-parallel-size 1
-
-# 2. Configure
-OPERATION_MODE=private
-VLLM_URL=http://localhost:8000/v1
-
-# 3. Start RAG
-docker-compose up -d
-```
-
-### Hybrid Mode (Recommended)
-
-Uses local resources when available, falls back to cloud:
-
-```bash
-OPERATION_MODE=hybrid
-OPENROUTER_API_KEY=sk-or-...
-VLLM_URL=http://localhost:8000/v1
-```
-
-Priority:
-1. vLLM (if running)
-2. OpenRouter (if API key configured)
-
-### Cloud Mode
-
-Uses only cloud services:
-
-```bash
-OPERATION_MODE=cloud
-OPENROUTER_API_KEY=sk-or-...
-OPENAI_API_KEY=sk-...
-```
-
-## Advanced RAG Configuration
-
-All features are controlled via environment variables (`.env`):
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `ENABLE_DOCLING` | `true` | Reserved for future Docling; pipeline currently uses PyMuPDF |
-| `CHUNKING_STRATEGY` | `auto` | `auto`, `sections`, `paragraphs`, `sliding`, `semantic` |
-| `ENABLE_FUSION_RETRIEVAL` | `true` | Combine BM25 + dense search via RRF |
-| `FUSION_ALPHA` | `0.5` | Dense vs BM25 weight (>0.5 favours dense) |
-| `ENABLE_HYDE` | `true` | HyDE for short/vague queries |
-| `ENABLE_CORRECTIVE_RAG` | `true` | Self-check retrieval + web fallback |
-
-### Query Pipeline
-
-```
-User Query
-    │
-    ├─ [HyDE] Generate hypothetical answer → blend embedding
-    │
-    ├─ [Fusion] BM25 + Dense vector search → RRF merge
-    │
-    ├─ [CRAG] Evaluate relevance → web fallback if LOW
-    │
-    ├─ [Rerank] Cross-encoder re-scoring → top-K
-    │
-    ├─ [LLM] Generate answer with context
-    │
-    ├─ [Citations] Validate + extract evidence
-    │
-    └─ [DeepEval] Faithfulness + relevancy metrics (background)
-```
-
-## Development
-
-### Backend Only
-
-```bash
-cd backend
-pip install -r requirements.txt
-python main.py
-```
-
-### Frontend Only
-
-```bash
-cd frontend
 npm install
 npm run dev
 ```
 
-From the `RAG-v2.1` root (after `npm install` in `frontend/`): `npm run dev` and `npm run build` delegate to `frontend/` so you do not need to `cd frontend` each time.
+Runs Vite on **http://localhost:5175** with `/api` proxied to **http://localhost:8000** and `/ee` to the entity extractor on **5001** if you use that feature.
+
+### Optional: Entity Extractor (OOCP)
+
+For URL/text entity extraction, run the separate **Text Body Extractor** backend (often port **5001** if 5000 is taken). In Docker, set `ENTITY_EXTRACTOR_URL` (e.g. `http://host.docker.internal:5001`).
+
+### Optional: Neo4j for graph + EE “push”
+
+- Neo4j Aura: set `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD` in `.env`.
+- Local Docker: see commented `neo4j` service in `docker-compose.yml`.
+
+## Operation modes
+
+| Mode | Behaviour |
+|------|-----------|
+| `private` | Local-first: vLLM + local embeddings (requires local stack and keys as per config). |
+| `hybrid` | Prefer local providers when available, otherwise cloud. |
+| `cloud` | OpenRouter + cloud embeddings (typical for hosted deploys). |
+
+Priority in hybrid/private is governed by `ENABLE_VLLM`, running vLLM, and configured API keys.
 
 ## Verification
-
-Run the verification script to test API, upload, and chat:
 
 ```bash
 cd RAG-v2.1
 python verify_system.py
 ```
 
-Quick **API-only smoke** (no upload, chat, or frontend check):
+API-only smoke:
 
 ```bash
 python verify_system.py --smoke
 ```
 
-Optional: `--base-url http://localhost:8000` and `--frontend-url http://localhost:3000` to override defaults.
+Options: `--base-url`, `--frontend-url`. More detail: [TESTING.md](TESTING.md).
 
-For detailed troubleshooting, see [TESTING.md](TESTING.md).
+## API surface (summary)
 
-## API Endpoints
+Full interactive docs: `/docs` on the API host.
 
-- `POST /documents/upload` - Upload PDF
-- `GET /documents/` - List documents
-- `POST /chat/query` - Query documents
-- `GET /logs/queries` - Query audit logs
+| Prefix | Purpose |
+|--------|---------|
+| `/auth` | Register, login, `me` |
+| `/documents` | Upload, list, search, chunks, rechunk, delete |
+| `/workspaces` | Investigation workspaces |
+| `/chat` | Query, conversations, models, evaluate |
+| `/logs` | Query audit logs and stats |
+| `/graph` | Neo4j status, build, search, NL query |
+| `/ch` | Companies House pipeline jobs, filings, downloads |
+| `/screening` | Name screening status and search |
 
-See full API documentation at http://localhost:8000/docs
-
-## License
+## Licence
 
 MIT

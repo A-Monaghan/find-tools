@@ -141,19 +141,13 @@ Credentials are expected to be stored in **settings** (or secure environment con
 
 The application already uses a **pipeline pattern** for other workflows: a main card for **run configuration**, clear **Run** action, and **history / settings** on sibling tabs. Entity screening is designed to **mirror** that pattern so investigators learn it once.
 
-The images below are **UI concepts** illustrating the planned layout; they are not photographs of production software.
-
 ### 6.1 Match — configure and run
 
-![Entity Match — configure and run (concept)](../assets/entity-match-ui-match-concept.png)
-
-*Concept: single-entity and bulk paths, optional attributes, source toggles, async job run.*
+*Planned layout: single-entity and bulk paths, optional attributes, source toggles, async job run — same pipeline pattern as other FIND Tools workflows.*
 
 ### 6.2 Results — table and graph
 
-![Entity Match — results table and link graph (concept)](../assets/entity-match-ui-results-concept.png)
-
-*Concept: per-source grouping, export format choice, interactive query→hit graph.*
+*Planned layout: per-source grouping, export format choice, interactive query→hit graph.*
 
 **Navigation (planned):**
 

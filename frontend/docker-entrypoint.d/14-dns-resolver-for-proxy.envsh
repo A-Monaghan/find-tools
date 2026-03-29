@@ -7,6 +7,15 @@ set -e
 if [ -z "${NGINX_RESOLVER:-}" ] && [ -r /etc/resolv.conf ]; then
 	ns=$(awk '/^nameserver/ { print $2; exit }' /etc/resolv.conf)
 	if [ -n "$ns" ]; then
+		# nginx requires IPv6 literals in square brackets; bare ::1 breaks `nginx -t` and the container exits.
+		case "$ns" in
+		*:*)
+			case "$ns" in
+			\[*\]) ;;
+			*) ns="[$ns]" ;;
+			esac
+			;;
+		esac
 		export NGINX_RESOLVER="$ns"
 	fi
 fi
