@@ -1,0 +1,12 @@
+# Applied when Docker build context is the repo root (e.g. Northflank + Dockerfile.frontend).
+# Subdirectory builds (context ./frontend) use frontend/.dockerignore only.
+
+.git
+.github
+backend
+services
+**/__pycache__
+frontend/node_modules
+frontend/dist
+frontend/.env
+frontend/.env.*

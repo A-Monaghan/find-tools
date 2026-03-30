@@ -145,8 +145,16 @@ Attach a volume at `/app/storage/documents` (1–5 GB to start). Without this, u
 ### Build
 
 1. **New Service** → **Combined (build + deploy)** (or deploy from GHCR if using CI).
-2. **Build context:** `frontend`.
-3. **Dockerfile path:** `frontend/Dockerfile`.
+
+**Build context vs Dockerfile (important):** Paths in `frontend/Dockerfile` assume the context is the **`frontend/` folder**. If Northflank only allows the **repository root** as context, use **`Dockerfile.frontend`** at the repo root instead (same image; all `COPY` paths are prefixed with `frontend/`). A root **`.dockerignore`** keeps the context smaller.
+
+| Platform behaviour | Context | Dockerfile |
+|--------------------|---------|------------|
+| Subdirectory allowed (e.g. GitHub Actions) | `frontend` | `frontend/Dockerfile` or `Dockerfile` under context |
+| Root only (common on some NF setups) | `.` (repo root) | `Dockerfile.frontend` |
+
+2. **Build context:** `frontend` **or** repo root (see table).
+3. **Dockerfile path:** `frontend/Dockerfile` **or** `Dockerfile.frontend` (root).
 4. **Build arguments:**
    ```
    VITE_API_BASE_URL=https://<your-backend>.northflank.app
