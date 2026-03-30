@@ -85,7 +85,7 @@ class Settings(BaseSettings):
     # === CLOUD LLM (OpenRouter) ===
     OPENROUTER_API_KEY: Optional[str] = Field(default=None, description="OpenRouter API key")
     DEFAULT_CLOUD_MODEL: str = Field(
-        default="moonshotai/kimi-k2.5",
+        default="openai/gpt-oss-safeguard-20b:nitro",
         description="Default cloud LLM model"
     )
     # Mini / cheap model for quick iterations (OpenRouter id); must match a model your key can call
