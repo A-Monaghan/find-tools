@@ -8,7 +8,15 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { FileText, Trash2, Upload, Loader2, CheckCircle2, AlertCircle, BookOpen, Eye, Link2, Network, RefreshCw, FolderOpen, Plus } from 'lucide-react';
 import { DocumentSummary, AvailableModel, WorkspaceSummary, GlobalSearchHit } from '../types';
-import { uploadDocument, deleteDocument, listDocuments, getDocumentChunks, importDocumentFromUrl, extractEntitiesFromDocument } from '../services/api';
+import {
+  uploadDocument,
+  deleteDocument,
+  listDocuments,
+  getDocumentChunks,
+  importDocumentFromUrl,
+  extractEntitiesFromDocument,
+  getApiBase,
+} from '../services/api';
 import { IngestPipelineStrip } from './IngestPipelineStrip';
 import { GlobalSearchBar } from './GlobalSearchBar';
 
@@ -214,7 +222,11 @@ export const DocumentLibrary: React.FC<DocumentLibraryProps> = ({
     const controller = new AbortController();
     pollAbortRef.current = controller;
 
-    const base = typeof window !== 'undefined' ? '/api' : (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8010').replace(/\/$/, '');
+    // Match main API client: same-origin /api when VITE unset or wrongly set to SPA origin.
+    const base =
+      typeof window !== 'undefined'
+        ? getApiBase()
+        : (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8010').replace(/\/$/, '');
     const root = base.startsWith('http') ? base : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000') + base;
     const url = `${root}/documents/${documentId}/progress`;
 

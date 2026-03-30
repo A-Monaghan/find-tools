@@ -14,12 +14,23 @@ import {
   GlobalSearchHit,
 } from '../types';
 
-// In browser: use VITE_API_BASE_URL when set (Fly prod), else /api (same-origin proxy).
-// In SSR/tests: use env or localhost.
-function getApiBase(): string {
+// In browser: VITE_API_BASE_URL when set to the *backend* URL, else same-origin /api (nginx proxy).
+// If VITE is wrongly set to the SPA origin (no /api path), POSTs hit nginx static → 405 Not Allowed.
+export function getApiBase(): string {
   if (typeof window !== 'undefined') {
-    const base = import.meta.env.VITE_API_BASE_URL;
-    return base ? String(base).replace(/\/$/, '') : '/api';
+    const raw = import.meta.env.VITE_API_BASE_URL;
+    if (!raw) return '/api';
+    const base = String(raw).replace(/\/$/, '');
+    try {
+      const u = new URL(base);
+      const path = u.pathname.replace(/\/$/, '') || '';
+      if (u.origin === window.location.origin && path === '') {
+        return '/api';
+      }
+    } catch {
+      /* relative or invalid; use as-is */
+    }
+    return base;
   }
   return (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '') || 'http://localhost:8000';
 }
@@ -444,9 +455,8 @@ export async function deleteCHJob(jobId: string): Promise<void> {
 
 /** Returns the download URL for a job (or latest if jobId omitted). */
 export function getCHDownloadUrl(jobId?: string): string {
-  const base = typeof window !== 'undefined'
-    ? (import.meta.env.VITE_API_BASE_URL ? String(import.meta.env.VITE_API_BASE_URL).replace(/\/$/, '') : '/api')
-    : 'http://localhost:8000';
+  const base =
+    typeof window !== 'undefined' ? getApiBase() : (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '') || 'http://localhost:8000';
   return jobId ? `${base}/ch/download/${jobId}` : `${base}/ch/download`;
 }
 

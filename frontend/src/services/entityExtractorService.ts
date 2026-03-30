@@ -1,11 +1,26 @@
 /**
  * Entity Extractor (Text Body Extractor) API client.
- * Talks to OOCP backend - use VITE_ENTITY_EXTRACTOR_URL or /ee proxy in dev.
+ * Dev: Vite proxies /ee → OOCP. Prod nginx has no /ee route — set VITE_ENTITY_EXTRACTOR_URL to a public OOCP URL.
  */
-const API_BASE =
-  (import.meta as any).env?.VITE_ENTITY_EXTRACTOR_URL ?? '/ee';
+const UNCONFIGURED_MSG =
+  'Entity Extractor is not configured for this deployment. Set VITE_ENTITY_EXTRACTOR_URL to your OOCP service URL.';
 
 const UNREACHABLE_MSG = `Entity Extractor backend not reachable. Start OOCP: cd "OOCP/TExt Body Extractor" && ./start_backend.sh`;
+
+function getEeBase(): string {
+  const v = import.meta.env.VITE_ENTITY_EXTRACTOR_URL;
+  if (v != null && String(v).trim() !== '') return String(v).replace(/\/$/, '');
+  if (import.meta.env.DEV) return '/ee';
+  return '';
+}
+
+/** OOCP paths always start with /api/... */
+function eeUrl(path: string): string {
+  const base = getEeBase();
+  if (!base) throw new Error(UNCONFIGURED_MSG);
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}`;
+}
 
 async function parseErrorMessage(res: Response): Promise<string> {
   try {
@@ -74,7 +89,7 @@ export interface AnalyzeResponse {
 }
 
 export async function analyzeWithBackend(payload: AnalyzePayload): Promise<AnalyzeResponse> {
-  const res = await safeFetch(`${API_BASE}/api/analyze`, {
+  const res = await safeFetch(eeUrl('/api/analyze'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -87,7 +102,7 @@ export async function analyzeWithBackendStreaming(
   payload: AnalyzePayload,
   onProgress: (p: { message?: string }) => void
 ): Promise<AnalyzeResponse> {
-  let res = await safeFetch(`${API_BASE}/api/analyze-stream`, {
+  let res = await safeFetch(eeUrl('/api/analyze-stream'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -133,13 +148,13 @@ export async function analyzeWithBackendStreaming(
 }
 
 export async function fetchPromptDefaults(): Promise<PromptDefaults> {
-  const res = await safeFetch(`${API_BASE}/api/prompt-defaults`);
+  const res = await safeFetch(eeUrl('/api/prompt-defaults'));
   if (!res.ok) throw new Error(UNREACHABLE_MSG);
   return (await res.json()) as Promise<PromptDefaults>;
 }
 
 export async function fetchNeo4jStatus(): Promise<{ connected: boolean; error?: string }> {
-  const res = await safeFetch(`${API_BASE}/api/neo4j-status`);
+  const res = await safeFetch(eeUrl('/api/neo4j-status'));
   return (await res.json()) as { connected: boolean; error?: string };
 }
 
@@ -158,7 +173,7 @@ export async function pushToNeo4j(
   if (connection?.uri) body.neo4j_uri = connection.uri;
   if (connection?.username) body.neo4j_username = connection.username;
   if (connection?.password) body.neo4j_password = connection.password;
-  const res = await safeFetch(`${API_BASE}/api/push-to-neo4j`, {
+  const res = await safeFetch(eeUrl('/api/push-to-neo4j'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

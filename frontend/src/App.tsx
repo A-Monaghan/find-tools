@@ -32,7 +32,14 @@ import { SubTabBar } from './components/SubTabBar';
 import { useToast } from './components/ToastContext';
 import { useUnifiedConfig } from './context/UnifiedConfigContext';
 import { DocumentSummary, Citation, RetrievedChunk, AvailableModel, RetrievalTrace, WorkspaceSummary, GlobalSearchHit } from './types';
-import { listDocuments, getHealth, getAvailableModels, listWorkspaces, createWorkspace } from './services/api';
+import {
+  listDocuments,
+  getHealth,
+  getAvailableModels,
+  listWorkspaces,
+  createWorkspace,
+  getApiBase,
+} from './services/api';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import {
   loadUiState,
@@ -109,11 +116,8 @@ function App() {
     return effectiveModelId;
   }, [config.chat.passMode, fastModelId, effectiveModelId]);
 
-  // Banner copy: local dev uses Vite /api proxy; production build may set VITE_API_BASE_URL
-  const apiTargetHint = useMemo(() => {
-    const v = import.meta.env.VITE_API_BASE_URL;
-    return v ? String(v).replace(/\/$/, '') : '/api → localhost:8000';
-  }, []);
+  // Shown when GET /health fails — use real base (same logic as fetch), not hardcoded localhost copy.
+  const apiTargetHint = useMemo(() => getApiBase(), []);
 
   // Check API on mount; while down, poll so the banner clears when you start the backend
   useEffect(() => {
@@ -347,16 +351,21 @@ function App() {
             <p className="text-xs text-ink-muted mt-1">{PRODUCT_TAGLINE}</p>
             {apiReachable === false && (
               <p className="text-xs text-amber-700 mt-2 leading-snug">
-                API unreachable — expected base <span className="font-mono">{apiTargetHint}</span>.
-                {!import.meta.env.VITE_API_BASE_URL && (
+                API unreachable — health check uses <span className="font-mono">{apiTargetHint}</span>
+                <span className="font-mono">/health</span>.{' '}
+                {import.meta.env.DEV ? (
                   <>
-                    {' '}
-                    From <span className="font-mono">FIND Tools</span> run{' '}
-                    <span className="font-mono">docker compose up -d</span> or{' '}
+                    Local: run <span className="font-mono">docker compose up -d</span> or{' '}
                     <span className="font-mono">./scripts/run_backend_venv.sh</span>.
                   </>
+                ) : (
+                  <>
+                    Check the backend service, nginx <span className="font-mono">/api</span> proxy if you use
+                    same-origin API, and <span className="font-mono">CORS_ORIGINS</span> if the browser calls the
+                    API on another origin.
+                  </>
                 )}{' '}
-                Clears when <span className="font-mono">GET /health</span> succeeds (retry every 8s).
+                Retries every 8s.
               </p>
             )}
           </div>

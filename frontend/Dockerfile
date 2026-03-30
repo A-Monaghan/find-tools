@@ -1,14 +1,19 @@
-# Build stage — keep Node major in sync with repo root Dockerfile (Northflank CI + Fly both use this file).
-FROM node:22-alpine AS builder
+# Build on Debian slim (glibc), not Alpine: esbuild/Rollup prebuilds align with most CI images;
+# Alpine/musl occasionally breaks or needs extra build deps on hosted builders.
+# Runtime image below stays nginx:alpine (small).
+FROM node:22-bookworm-slim AS builder
 
 # For Fly / GH Actions: pass VITE_API_BASE_URL so the SPA calls the public API (CORS on backend).
 ARG VITE_API_BASE_URL=
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# Vite bundling many modules can hit default heap on small build VMs.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+# Reproducible install; fails if lockfile does not match package.json (surfaces drift early).
+RUN npm ci
 
 COPY . .
 RUN npm run build
