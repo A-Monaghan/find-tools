@@ -128,6 +128,9 @@ services:
     container_name: rag-frontend
     ports:
       - "3000:80"
+    # Same service name as Northflank internal DNS when both services share a project network.
+    environment:
+      - NGINX_PROXY_API_UPSTREAM=http://backend:8000
     depends_on:
       - backend
     networks:

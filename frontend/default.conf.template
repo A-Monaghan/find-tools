@@ -29,8 +29,10 @@ server {
 
     location /api/ {
         # Strip /api prefix; variable proxy_pass uses resolver at request time (no startup DNS failure).
+        # Upstream URL is injected by docker-entrypoint.d/15-bake-api-upstream-into-template.sh (not ${...}
+        # here) so official nginx envsubst cannot leave a literal $var that nginx resolves to empty → HTTP 500.
         rewrite ^/api/(.*)$ /$1 break;
-        set $upstream_api "${NGINX_PROXY_API_UPSTREAM}";
+        set $upstream_api "__NGINX_PROXY_API_UPSTREAM__";
         proxy_pass $upstream_api;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

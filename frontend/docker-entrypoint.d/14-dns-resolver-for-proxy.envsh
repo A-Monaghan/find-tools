@@ -4,6 +4,12 @@
 
 set -e
 
+# Some hosts (e.g. Northflank) set NGINX_PROXY_API_UPSTREAM="" in the UI, which overrides
+# Dockerfile ENV and leaves proxy_pass with an empty URL → "invalid URL prefix" / HTTP 500.
+if [ -z "${NGINX_PROXY_API_UPSTREAM:-}" ]; then
+	export NGINX_PROXY_API_UPSTREAM="http://backend:8000"
+fi
+
 if [ -z "${NGINX_RESOLVER:-}" ] && [ -r /etc/resolv.conf ]; then
 	ns=$(awk '/^nameserver/ { print $2; exit }' /etc/resolv.conf)
 	if [ -n "$ns" ]; then
