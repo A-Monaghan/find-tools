@@ -12,7 +12,7 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''), // /api/documents/upload -> /documents/upload
       },
-      // Entity Extractor (OOCP Text Body Extractor) - runs on 5001
+      // Entity Extractor (services/text-body-extractor) — default port 5001 on host
       '/ee': {
         target: 'http://localhost:5001',
         changeOrigin: true,

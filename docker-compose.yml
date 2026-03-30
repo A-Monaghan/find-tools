@@ -137,6 +137,25 @@ services:
       - rag-network
     restart: unless-stopped
 
+  # Optional: Text Body Extractor for Entity Extractor tab (host :5001 → container :8000)
+  # Run: docker compose --profile entity-extractor up -d text-body-extractor
+  text-body-extractor:
+    profiles:
+      - entity-extractor
+    build:
+      context: ./services/text-body-extractor
+      dockerfile: Dockerfile
+    container_name: rag-text-body-extractor
+    ports:
+      - "5001:8000"
+    environment:
+      - PORT=8000
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    networks:
+      - rag-network
+    restart: unless-stopped
+
   # Optional: uncomment to put nginx in front (then use http://localhost for UI)
   # nginx:
   #   image: nginx:alpine

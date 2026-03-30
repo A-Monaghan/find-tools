@@ -6,6 +6,9 @@ FROM node:22-bookworm-slim AS builder
 # For Fly / GH Actions: pass VITE_API_BASE_URL so the SPA calls the public API (CORS on backend).
 ARG VITE_API_BASE_URL=
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# Optional: public URL of Text Body Extractor (services/text-body-extractor) for Entity Extractor tab in prod.
+ARG VITE_ENTITY_EXTRACTOR_URL=
+ENV VITE_ENTITY_EXTRACTOR_URL=$VITE_ENTITY_EXTRACTOR_URL
 # Vite bundling many modules can hit default heap on small build VMs.
 ENV NODE_OPTIONS=--max-old-space-size=4096
 

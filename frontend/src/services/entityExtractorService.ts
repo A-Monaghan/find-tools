@@ -1,11 +1,12 @@
 /**
  * Entity Extractor (Text Body Extractor) API client.
- * Dev: Vite proxies /ee → OOCP. Prod nginx has no /ee route — set VITE_ENTITY_EXTRACTOR_URL to a public OOCP URL.
+ * Dev: Vite proxies /ee → Text Body Extractor (services/text-body-extractor, default :5001).
+ * Prod: nginx has no /ee unless you add it — set VITE_ENTITY_EXTRACTOR_URL to a public extractor URL.
  */
 const UNCONFIGURED_MSG =
-  'Entity Extractor is not configured for this deployment. Set VITE_ENTITY_EXTRACTOR_URL to your OOCP service URL.';
+  'Entity Extractor is not configured for this deployment. Set VITE_ENTITY_EXTRACTOR_URL to your Text Body Extractor service URL.';
 
-const UNREACHABLE_MSG = `Entity Extractor backend not reachable. Start OOCP: cd "OOCP/TExt Body Extractor" && ./start_backend.sh`;
+const UNREACHABLE_MSG = `Entity Extractor backend not reachable. Start it: cd services/text-body-extractor && ./start_backend.sh`;
 
 function getEeBase(): string {
   const v = import.meta.env.VITE_ENTITY_EXTRACTOR_URL;
@@ -14,7 +15,7 @@ function getEeBase(): string {
   return '';
 }
 
-/** OOCP paths always start with /api/... */
+/** Text Body Extractor paths always start with /api/... */
 function eeUrl(path: string): string {
   const base = getEeBase();
   if (!base) throw new Error(UNCONFIGURED_MSG);

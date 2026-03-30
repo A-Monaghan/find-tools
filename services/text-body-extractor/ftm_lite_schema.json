@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FTM Lite Schema",
+  "description": "Lightweight Follow The Money schema for entity and relationship extraction",
+  "version": "1.0",
+  "entities": {
+    "Person": {
+      "description": "Individual human being",
+      "properties": {
+        "name": { "type": "string", "required": true }
+      }
+    },
+    "Organization": {
+      "description": "Group or institution",
+      "properties": {
+        "name": { "type": "string", "required": true }
+      }
+    },
+    "Company": {
+      "description": "Business entity",
+      "properties": {
+        "name": { "type": "string", "required": true }
+      }
+    },
+    "LegalEntity": {
+      "description": "Legal person (company, trust, foundation)",
+      "properties": {
+        "name": { "type": "string", "required": true }
+      }
+    },
+    "Address": {
+      "description": "Physical location or address",
+      "properties": {
+        "name": { "type": "string", "required": true }
+      }
+    },
+    "Document": {
+      "description": "Written or electronic record",
+      "properties": {
+        "name": { "type": "string", "required": true }
+      }
+    },
+    "Event": {
+      "description": "Occurrence or incident",
+      "properties": {
+        "name": { "type": "string", "required": true }
+      }
+    },
+    "Concept": {
+      "description": "Abstract idea or topic",
+      "properties": {
+        "name": { "type": "string", "required": true }
+      }
+    }
+  },
+  "relationships": {
+    "Ownership": {
+      "description": "Entity owns or controls another",
+      "source": ["Person", "Organization", "Company", "LegalEntity"],
+      "target": ["Organization", "Company", "LegalEntity"]
+    },
+    "Directorship": {
+      "description": "Person directs or manages organization",
+      "source": ["Person"],
+      "target": ["Organization", "Company", "LegalEntity"]
+    },
+    "Membership": {
+      "description": "Entity is member of organization",
+      "source": ["Person", "Organization"],
+      "target": ["Organization", "Company"]
+    },
+    "Association": {
+      "description": "General association between entities",
+      "source": ["Person", "Organization", "Company", "LegalEntity"],
+      "target": ["Person", "Organization", "Company", "LegalEntity"]
+    },
+    "LocatedAt": {
+      "description": "Entity located at address",
+      "source": ["Person", "Organization", "Company", "LegalEntity"],
+      "target": ["Address"]
+    },
+    "InvolvedIn": {
+      "description": "Entity involved in event",
+      "source": ["Person", "Organization"],
+      "target": ["Event"]
+    },
+    "MentionedIn": {
+      "description": "Entity mentioned in document",
+      "source": ["Person", "Organization", "Company", "Event"],
+      "target": ["Document"]
+    },
+    "RelatedTo": {
+      "description": "General relationship",
+      "source": ["Person", "Organization", "Company", "LegalEntity", "Address", "Document", "Event", "Concept"],
+      "target": ["Person", "Organization", "Company", "LegalEntity", "Address", "Document", "Event", "Concept"]
+    }
+  }
+}

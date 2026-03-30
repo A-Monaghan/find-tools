@@ -1,0 +1,14 @@
+# Keep image small; do not copy local venv or front-end tooling into the API image
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+node_modules/
+text-body-relationship-extractor/node_modules/
+Outputs/
+*.zip
+.git/
+*.md
+!README.md

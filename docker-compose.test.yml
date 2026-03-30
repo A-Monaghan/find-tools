@@ -1,6 +1,6 @@
 # Override for local testing: adds Neo4j for Entity Extractor Push-to-Neo4j
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d
-# OOCP runs on host:5001; RAG backend uses ENTITY_EXTRACTOR_URL (set in main compose).
+# Text Body Extractor: host :5001 or Compose profile entity-extractor; RAG uses ENTITY_EXTRACTOR_URL.
 
 services:
   neo4j:

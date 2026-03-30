@@ -1,0 +1,6 @@
+{
+  "name": "Text Body Relationship extractor",
+  "description": "An application to extract entities and relationships from text using AI, and export them as CSV files for Neo4j.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

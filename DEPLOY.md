@@ -9,19 +9,22 @@ cp .env.example .env   # if .env missing
 docker-compose up -d
 ```
 
-**Optional – Neo4j:** For graph ingestion, add to `OOCP/TExt Body Extractor/.env`:
+**Optional – Neo4j:** For graph ingestion, add to `services/text-body-extractor/.env`:
 ```
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=yourpassword
 ```
-Restart OOCP. Entity Extractor shows "Neo4j: Connected" when reachable.
+Restart the extractor. Entity Extractor shows "Neo4j: Connected" when reachable.
 
-**Optional – Entity Extractor:** For URL/text entity extraction, start OOCP:
+**Optional – Entity Extractor:** For URL/text entity extraction, run the bundled service:
 ```bash
-cd "OOCP/TExt Body Extractor" && ./start_backend.sh
+cd services/text-body-extractor && cp -n .env.example .env   # once; add keys
+./start_backend.sh
 ```
-Frontend proxies `/ee` → localhost:5001 in dev.
+Or with Docker Compose (publishes **5001** on the host): `docker compose --profile entity-extractor up -d text-body-extractor`
+
+Frontend dev proxies `/ee` → `http://localhost:5001`.
 
 **Access:** http://localhost:3000 (frontend) | http://localhost:8000/docs (API)
 

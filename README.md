@@ -23,7 +23,7 @@ The repository folder is `RAG-v2.1`; the product UI and OpenAPI title are **FIND
 
 | Area | Role |
 |------|------|
-| **Entity Extractor** | Calls an optional **OOCP Text Body Extractor** service (proxied as `/ee` in Vite dev). |
+| **Entity Extractor** | Calls the bundled **Text Body Extractor** in `services/text-body-extractor` (proxied as `/ee` in Vite dev). |
 | **Companies House** | UK company pipeline and filings via backend routes under `/ch` (API key from env or UI). |
 | **Name screening** | Server-side lookups (OpenSanctions / Aleph / Sayari) when keys are set — see `.env.example`. |
 | **Tools** | Shortcuts into other tabs (memory, extractor, about). |
@@ -76,7 +76,7 @@ flowchart TB
   end
 
   subgraph opt["Optional sidecar"]
-    EE["OOCP Entity Extractor<br/>:5001 typical"]
+    EE["Text Body Extractor<br/>services/text-body-extractor<br/>:5001 typical"]
   end
 
   B --> FE
@@ -169,9 +169,9 @@ npm run dev
 
 Runs Vite on **http://localhost:5175** with `/api` proxied to **http://localhost:8000** and `/ee` to the entity extractor on **5001** if you use that feature.
 
-### Optional: Entity Extractor (OOCP)
+### Optional: Entity Extractor (Text Body Extractor)
 
-For URL/text entity extraction, run the separate **Text Body Extractor** backend (often port **5001** if 5000 is taken). In Docker, set `ENTITY_EXTRACTOR_URL` (e.g. `http://host.docker.internal:5001`).
+The repo includes **`services/text-body-extractor`** (FastAPI). For URL/text entity extraction, run `./start_backend.sh` from that directory (default **PORT=5001** in `.env` to match the Vite `/ee` proxy), or `docker compose --profile entity-extractor up -d text-body-extractor`. In Docker, the main RAG backend can use `ENTITY_EXTRACTOR_URL` (e.g. `http://host.docker.internal:5001` when the extractor runs on the host, or `http://text-body-extractor:8000` when using the Compose service).
 
 ### Optional: Neo4j for graph + EE “push”
 

@@ -2,7 +2,7 @@
 
 ## Architecture overview
 
-The app has **two container images** plus **three managed add-ons**:
+The app has **two core container images** (frontend + backend), an **optional third** (`services/text-body-extractor` for the Entity Extractor tab), plus **three managed add-ons**:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -29,6 +29,7 @@ The app has **two container images** plus **three managed add-ons**:
 |-----------|---------------|------|-------|
 | **Backend** | `backend/Dockerfile` — Python 3.11, Uvicorn | 8000 | Stateless; document uploads need a persistent volume |
 | **Frontend** | `frontend/Dockerfile` — Node build → nginx | 80 | Static SPA; nginx reverse-proxies `/api/` to backend |
+| **Text Body Extractor** (optional) | `services/text-body-extractor/Dockerfile` — FastAPI | 8000 | Entity Extractor tab; browser calls it directly when `VITE_ENTITY_EXTRACTOR_URL` is set at frontend build |
 | **Postgres** | Northflank add-on or `ankane/pgvector` | 5432 | pgvector extension required for vector store fallback |
 | **Qdrant** | Northflank add-on or `qdrant/qdrant:v1.7.4` | 6333 | Primary vector store |
 | **Redis** | Northflank add-on or `redis:7-alpine` | 6379 | Query/response cache |
@@ -84,8 +85,18 @@ The repo already has `.github/workflows/northflank-deploy.yml`. It builds both i
 | Variable | Value |
 |----------|-------|
 | `BACKEND_PUBLIC_URL` | Public URL of your backend service, e.g. `https://api-xxxxx.northflank.app` (no trailing slash) |
+| `ENTITY_EXTRACTOR_PUBLIC_URL` | (Optional) Public URL of the Text Body Extractor service, e.g. `https://extractor-xxxxx.northflank.app` — baked into the frontend build as `VITE_ENTITY_EXTRACTOR_URL` |
+| `NF_TEXT_BODY_EXTRACTOR_SERVICE_ID` | (Optional) Northflank **service id** for the extractor. If empty, CI skips building/deploying `rag-text-body-extractor`. |
 
 Push to `main`, `master`, or `develop` triggers the pipeline.
+
+### Optional — Text Body Extractor on Northflank
+
+1. **New service** → deploy from registry later, or **External image** placeholder. Internal port **8000** (matches `services/text-body-extractor/Dockerfile`). Add a public HTTPS port so the browser can reach it.
+2. Copy the **service id** into GitHub → **Variables** → `NF_TEXT_BODY_EXTRACTOR_SERVICE_ID`.
+3. After the first deploy, set the extractor’s public base URL (no trailing slash) in **`ENTITY_EXTRACTOR_PUBLIC_URL`**, then **re-run** the workflow (or push again) so the frontend image is rebuilt with the Entity Extractor URL.
+4. On the extractor service, set runtime secrets/env, e.g. `OPENROUTER_API_KEY`. The FastAPI app already allows CORS from any origin (`allow_origins=["*"]`); tighten in production if you prefer.
+5. If the main RAG **backend** must call the extractor server-side, set `ENTITY_EXTRACTOR_URL` on the backend to the **internal** URL, e.g. `http://<extractor-service-name>:8000`.
 
 ### 3b — Northflank-native build (alternative)
 
@@ -136,11 +147,12 @@ Attach a volume at `/app/storage/documents` (1–5 GB to start). Without this, u
 1. **New Service** → **Combined (build + deploy)** (or deploy from GHCR if using CI).
 2. **Build context:** `frontend`.
 3. **Dockerfile path:** `frontend/Dockerfile`.
-4. **Build argument:**
+4. **Build arguments:**
    ```
    VITE_API_BASE_URL=https://<your-backend>.northflank.app
+   VITE_ENTITY_EXTRACTOR_URL=https://<your-extractor>.northflank.app
    ```
-   This bakes the API URL into the Vite bundle at build time. If you change the backend URL you must rebuild the frontend.
+   The first bakes the RAG API URL into the bundle. The second enables the **Entity Extractor** tab against your deployed Text Body Extractor (omit if you do not run that service).
 5. Internal port: **80**.
 
 ### Frontend environment variables (runtime)
@@ -172,6 +184,7 @@ Northflank services in the same project can reach each other by internal hostnam
 | Backend → Redis | `redis://<redis-host>:6379` | Internal |
 | Browser → Frontend | `https://<frontend>.northflank.app` | Public TLS endpoint |
 | Browser → Backend (CORS) | `https://<backend>.northflank.app` | Only needed if the SPA calls the API directly (VITE_API_BASE_URL) |
+| Browser → Text Body Extractor | `https://<extractor>.northflank.app` | Set `ENTITY_EXTRACTOR_PUBLIC_URL` + rebuild frontend (`VITE_ENTITY_EXTRACTOR_URL`) |
 
 **CORS**: the backend's `CORS_ORIGINS` must include the frontend's public URL.
 
@@ -230,7 +243,8 @@ The backend is the heaviest — it loads spaCy, sentence-transformers for rerank
 The workflow at `.github/workflows/northflank-deploy.yml` handles the full flow:
 
 1. Builds `backend/Dockerfile` → pushes to `ghcr.io/<org>/<repo>/rag-backend:<sha>`.
-2. Builds `frontend/Dockerfile` with `VITE_API_BASE_URL` → pushes to `ghcr.io/<org>/<repo>/rag-frontend:<sha>`.
-3. Deploys both to Northflank via the `northflank/deploy-to-northflank` action.
+2. Builds `frontend/Dockerfile` with `VITE_API_BASE_URL` and optional `VITE_ENTITY_EXTRACTOR_URL` → pushes to `ghcr.io/<org>/<repo>/rag-frontend:<sha>`.
+3. If `NF_TEXT_BODY_EXTRACTOR_SERVICE_ID` is set: builds `services/text-body-extractor/Dockerfile` → `ghcr.io/<org>/<repo>/rag-text-body-extractor:<sha>` and deploys it.
+4. Deploys backend and frontend to Northflank via the `northflank/deploy-to-northflank` action.
 
 Set the GitHub secrets/variables listed in Step 3a and pushes to `main`/`master`/`develop` auto-deploy.

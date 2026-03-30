@@ -1,0 +1,22 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+flask>=3.0.0
+flask-cors>=4.0.0
+requests==2.31.0
+beautifulsoup4>=4.12.3,<5.0.0  # docling needs >=4.12.3; newspaper3k accepts >=4.4.1
+openai==1.12.0
+python-dotenv==1.0.0
+pandas>=2.2.0
+newspaper3k==0.2.8
+lxml>=5.3.0,<6.0.0
+trafilatura>=2.0.0
+python-multipart==0.0.6
+jinja2==3.1.2
+neo4j>=5.15.0
+
+# Docling for advanced document chunking
+docling>=2.0.0
+docling-core>=2.0.0
+transformers>=4.30.0
+torch>=2.0.0
+sentencepiece>=0.1.99 

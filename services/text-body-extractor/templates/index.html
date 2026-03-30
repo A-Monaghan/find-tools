@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Body Relationship Extractor</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { color-scheme: dark; }
+        body { font-family: 'Inter', sans-serif; background-color: #020617; -webkit-font-smoothing: antialiased; }
+        ::selection { background: rgba(99, 102, 241, 0.3); }
+        .spinner {
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top: 2px solid rgb(99, 102, 241);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-[#020617] text-slate-100">
+    <header class="bg-[#0f172a]/80 backdrop-blur-sm border-b border-white/5 sticky top-0 z-10">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-2xl font-bold bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent">Text Body Relationship Extractor</h1>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="max-w-4xl mx-auto">
+            
+            <!-- OpenRouter Configuration (uses OPENROUTER_API_KEY from .env) -->
+            <div class="p-4 sm:p-6 rounded-xl bg-slate-900 border border-white/10 mb-6">
+                <h2 class="text-lg font-bold text-slate-100 mb-4">OpenRouter</h2>
+                <div class="max-w-xs">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Model</label>
+                    <select id="openrouter-model" class="w-full px-4 py-3 bg-slate-900 border border-white/10 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50">
+                        <option value="openai/gpt-4o-mini">GPT-4o mini</option>
+                        <option value="moonshotai/kimi-k2.5">Kimi</option>
+                        <option value="minimax/minimax-m2.5">Minimax</option>
+                        <option value="anthropic/claude-3.5-sonnet">Sonnet</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Input Section -->
+            <div class="p-4 sm:p-6 rounded-xl bg-slate-900 border border-white/10">
+                <div class="flex border-b border-white/10 mb-4 gap-2">
+                    <button id="url-tab" class="px-4 py-2.5 rounded-xl text-sm font-semibold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-900/30">
+                        Analyze from URL
+                    </button>
+                    <button id="text-tab" class="px-4 py-2.5 rounded-xl text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-white/5">
+                        Analyze from Text
+                    </button>
+                </div>
+
+                <div id="url-input-section">
+                    <label for="url-input" class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Website URL</label>
+                    <input
+                        id="url-input"
+                        type="url"
+                        placeholder="https://example.com/article"
+                        class="w-full px-4 py-3 bg-slate-900 border border-white/10 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 placeholder-slate-500"
+                    />
+                </div>
+
+                <div id="text-input-section" class="hidden">
+                    <label for="text-input" class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Text Content</label>
+                    <textarea
+                        id="text-input"
+                        placeholder="Paste your text here..."
+                        class="w-full h-48 px-4 py-3 bg-slate-900 border border-white/10 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 placeholder-slate-500"
+                    ></textarea>
+                </div>
+
+                <div class="mt-4 flex flex-col sm:flex-row items-center gap-4">
+                    <button
+                        id="analyze-btn"
+                        class="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-lg shadow-indigo-900/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                    >
+                        <svg id="analyze-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        <div id="spinner" class="spinner hidden"></div>
+                        <span id="analyze-text">Extract Relationships</span>
+                    </button>
+                    <button
+                        id="clear-btn"
+                        class="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all text-sm font-semibold"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Clear All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="progress-display" class="mt-3 px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-sm text-indigo-300 font-mono overflow-y-auto hidden" style="height: 3.5rem; line-height: 1.25rem;"></div>
+            <div id="error-display" class="mt-6 p-4 rounded-xl bg-white/[0.02] border border-white/10 hidden" role="alert">
+                <p class="font-bold text-red-400">Error</p>
+                <p id="error-message" class="text-sm text-slate-400 mt-1"></p>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="mt-8 hidden">
+                <!-- Extracted Text Display -->
+                <div id="extracted-text-section" class="mb-8 hidden">
+                    <h2 class="text-xl font-bold text-slate-100 mb-2">Extracted Text</h2>
+                    <div class="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                        <textarea id="extracted-text-display" class="w-full h-32 px-4 py-3 bg-slate-900 border border-white/10 rounded-xl text-slate-200 text-sm resize-none" readonly></textarea>
+                    </div>
+                </div>
+
+                <!-- Entities -->
+                <div class="mb-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-xl font-bold text-slate-100">Entities</h2>
+                        <button
+                            id="download-entities-btn"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-white/10 rounded-xl text-slate-200 hover:bg-slate-700 hover:border-orange-500/30 transition-all text-sm font-medium"
+                        >
+                            <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Download CSV
+                        </button>
+                    </div>
+                    <div class="rounded-xl bg-white/[0.02] border border-white/5 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full divide-y divide-white/5">
+                                <thead class="bg-[#0f172a]/80">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">ID</th>
+                                        <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Name</th>
+                                        <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Label</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="entities-table-body" class="divide-y divide-white/5">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Relationships -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-xl font-bold text-slate-100">Relationships</h2>
+                        <button
+                            id="download-relationships-btn"
+                            class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-white/10 rounded-xl text-slate-200 hover:bg-slate-700 hover:border-orange-500/30 transition-all text-sm font-medium"
+                        >
+                            <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Download CSV
+                        </button>
+                    </div>
+                    <div class="rounded-xl bg-white/[0.02] border border-white/5 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full divide-y divide-white/5">
+                                <thead class="bg-[#0f172a]/80">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Source</th>
+                                        <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Target</th>
+                                        <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="relationships-table-body" class="divide-y divide-white/5">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // State management
+        let currentData = {
+            entities: [],
+            relationships: []
+        };
+
+        // DOM elements
+        const openrouterModelSelect = document.getElementById('openrouter-model');
+        const urlTab = document.getElementById('url-tab');
+        const textTab = document.getElementById('text-tab');
+        const urlInputSection = document.getElementById('url-input-section');
+        const textInputSection = document.getElementById('text-input-section');
+        const urlInput = document.getElementById('url-input');
+        const textInput = document.getElementById('text-input');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const progressDisplay = document.getElementById('progress-display');
+        const errorDisplay = document.getElementById('error-display');
+        const errorMessage = document.getElementById('error-message');
+        const resultsSection = document.getElementById('results-section');
+        const extractedTextSection = document.getElementById('extracted-text-section');
+        const extractedTextDisplay = document.getElementById('extracted-text-display');
+        const entitiesTableBody = document.getElementById('entities-table-body');
+        const relationshipsTableBody = document.getElementById('relationships-table-body');
+        const downloadEntitiesBtn = document.getElementById('download-entities-btn');
+        const downloadRelationshipsBtn = document.getElementById('download-relationships-btn');
+
+        // Event listeners
+        urlTab.addEventListener('click', () => switchTab('url'));
+        textTab.addEventListener('click', () => switchTab('text'));
+        analyzeBtn.addEventListener('click', handleAnalyze);
+        clearBtn.addEventListener('click', clearAll);
+        downloadEntitiesBtn.addEventListener('click', () => downloadCSV('entities'));
+        downloadRelationshipsBtn.addEventListener('click', () => downloadCSV('relationships'));
+
+        const tabActive = 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30';
+        const tabInactive = 'text-slate-400 hover:text-slate-200 hover:bg-white/5';
+        function switchTab(tab) {
+            if (tab === 'url') {
+                urlTab.classList.add(...tabActive.split(' '));
+                urlTab.classList.remove(...tabInactive.split(' '));
+                textTab.classList.remove(...tabActive.split(' '));
+                textTab.classList.add(...tabInactive.split(' '));
+                urlInputSection.classList.remove('hidden');
+                textInputSection.classList.add('hidden');
+            } else {
+                textTab.classList.add(...tabActive.split(' '));
+                textTab.classList.remove(...tabInactive.split(' '));
+                urlTab.classList.remove(...tabActive.split(' '));
+                urlTab.classList.add(...tabInactive.split(' '));
+                textInputSection.classList.remove('hidden');
+                urlInputSection.classList.add('hidden');
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorDisplay.classList.remove('hidden');
+        }
+
+        function hideError() {
+            errorDisplay.classList.add('hidden');
+        }
+
+        function setLoading(loading) {
+            const analyzeIcon = document.getElementById('analyze-icon');
+            const spinner = document.getElementById('spinner');
+            const analyzeText = document.getElementById('analyze-text');
+            
+            if (loading) {
+                analyzeBtn.disabled = true;
+                analyzeIcon.classList.add('hidden');
+                spinner.classList.remove('hidden');
+                analyzeText.textContent = 'Analyzing...';
+            } else {
+                analyzeBtn.disabled = false;
+                analyzeIcon.classList.remove('hidden');
+                spinner.classList.add('hidden');
+                analyzeText.textContent = 'Extract Relationships';
+            }
+        }
+
+        async function handleAnalyze() {
+            const openrouterModel = openrouterModelSelect.value;
+            const url = urlInput.value.trim();
+            const text = textInput.value.trim();
+            const inputMode = urlTab.classList.contains('bg-indigo-600') ? 'url' : 'text';
+
+            if (inputMode === 'url' && (!url || !url.match(/^https?:\/\//))) {
+                showError('Please enter a valid URL (e.g., https://...)');
+                return;
+            }
+
+            if (inputMode === 'text' && !text.trim()) {
+                showError('Please enter text to analyze');
+                return;
+            }
+
+            setLoading(true);
+            hideError();
+            progressDisplay.innerHTML = '';
+            progressDisplay.classList.add('hidden');
+
+            try {
+                let response = await fetch('/api/analyze-stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        openrouter_model: openrouterModel,
+                        url: url,
+                        text: text,
+                        input_mode: inputMode
+                    })
+                });
+                if (response.status === 404) {
+                    response = await fetch('/api/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            openrouter_model: openrouterModel,
+                            url: url,
+                            text: text,
+                            input_mode: inputMode
+                        })
+                    });
+                    const result = await response.json();
+                    if (result.error) showError(result.error);
+                    else { currentData = result.data; displayResults(result.data, result.extracted_text); }
+                    return;
+                }
+                if (!response.ok) throw new Error(response.statusText || 'Stream failed');
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let finalResult = null;
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop() || '';
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                if (data.type === 'result') {
+                                    finalResult = data;
+                                } else if (data.type === 'error') {
+                                    throw new Error(data.detail || 'Extraction failed');
+                                } else if (data.message) {
+                                    progressDisplay.innerHTML += '<div>' + data.message.replace(/</g, '&lt;') + '</div>';
+                                    progressDisplay.classList.remove('hidden');
+                                    progressDisplay.scrollTop = progressDisplay.scrollHeight;
+                                }
+                            } catch (e) {
+                                if (e instanceof Error && e.message !== 'Extraction failed') { /* parse skip */ }
+                            }
+                        }
+                    }
+                }
+                progressDisplay.classList.add('hidden');
+                if (finalResult && finalResult.success) {
+                    currentData = finalResult.data;
+                    displayResults(finalResult.data, finalResult.extracted_text);
+                } else if (finalResult && finalResult.detail) {
+                    showError(finalResult.detail);
+                }
+            } catch (error) {
+                progressDisplay.classList.add('hidden');
+                showError(error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.');
+                console.error('Error:', error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function displayResults(data, extractedText) {
+            // Display extracted text if available
+            if (extractedText) {
+                extractedTextDisplay.value = extractedText;
+                extractedTextSection.classList.remove('hidden');
+            } else {
+                extractedTextSection.classList.add('hidden');
+            }
+
+            // Display entities
+            entitiesTableBody.innerHTML = '';
+            data.entities.forEach(entity => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-white/[0.02] transition-colors';
+                row.innerHTML = `
+                    <td class="px-4 py-3 text-sm text-slate-200">${entity.id}</td>
+                    <td class="px-4 py-3 text-sm text-slate-200">${entity.name}</td>
+                    <td class="px-4 py-3 text-sm text-slate-200">${entity.label}</td>
+                `;
+                entitiesTableBody.appendChild(row);
+            });
+
+            // Display relationships
+            relationshipsTableBody.innerHTML = '';
+            data.relationships.forEach(relationship => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-white/[0.02] transition-colors';
+                row.innerHTML = `
+                    <td class="px-4 py-3 text-sm text-slate-200">${relationship.source}</td>
+                    <td class="px-4 py-3 text-sm text-slate-200">${relationship.target}</td>
+                    <td class="px-4 py-3 text-sm text-slate-200">${relationship.type}</td>
+                `;
+                relationshipsTableBody.appendChild(row);
+            });
+
+            resultsSection.classList.remove('hidden');
+        }
+
+        async function downloadCSV(fileType) {
+            try {
+                const response = await fetch(`/api/download/${fileType}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentData)
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${fileType}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    const error = await response.json();
+                    showError(error.error || 'Download failed');
+                }
+            } catch (error) {
+                showError('Download failed');
+                console.error('Download error:', error);
+            }
+        }
+
+        function clearAll() {
+            urlInput.value = '';
+            textInput.value = '';
+            currentData = { entities: [], relationships: [] };
+            resultsSection.classList.add('hidden');
+            extractedTextSection.classList.add('hidden');
+            hideError();
+            entitiesTableBody.innerHTML = '';
+            relationshipsTableBody.innerHTML = '';
+        }
+    </script>
+</body>
+</html> 
